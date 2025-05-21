@@ -1,0 +1,51 @@
+id,negation_utterance,negation_utterance_order,contrast_utterance,contrast_utterance_order,valid_contrast,negated_noun,contrast_noun,annotator,notes,work_unit_id
+8286840,not the penguin,512,look at that cow there,514,TRUE,the penguin,that cow,Jess,,WU-003
+8286966,it's not a shame,1572,,,FALSE,,,Jess,,WU-003
+8287123,that not a train,907,is that a carriage,898,TRUE,a train,a carriage,Jess,,WU-003
+8287323,he's not a very good teddy+bear at sitting up that one is he,625,,,FALSE,,,Jess,,WU-003
+8288337,not Duck,1297,,,FALSE,,,Jess,,WU-003
+8288339,I'm not the girl,67,,,TRUE,the girl,xxx,Jess,,WU-003
+8288488,I wasn't I not a Mummy,75,lady,80,TRUE,a Mummy,lady,Jess,,WU-003
+8288756,that's not a big bag,88,,,TRUE,a big bag,a big enough bag,Jess,,WU-003
+8290582,me not cares,1403,,,FALSE,,,Jess,,WU-003
+8290640,me not cares,1406,,,FALSE,,,Jess,,WU-003
+8290673,me not cares,1408,,,FALSE,,,Jess,,WU-003
+8290691,me not cares,1409,,,FALSE,,,Jess,,WU-003
+8290951,not trousers on,1452,,,FALSE,,,Jess,,WU-003
+8291124,they're not dungarees,1464,dungarees trousers,1473,TRUE,dungarees,trousers,Jess,,WU-003
+8291146,they're not dungarees,1465,dungarees trousers,1473,TRUE,dungarees,trousers,Jess,,WU-003
+8291858,it's not my tummy you're sitting on though is it,1004,,,TRUE,my tummy,xxx,Jess,,WU-003
+8292055,it's not an orange to be eaten,1481,,,TRUE,an orange,xxx,Jess,,WU-003
+8292370,that's not the one about Father_Christmas,1761,,,FALSE,,,Jess,,WU-003
+8292685,you're not a baby sheep,1040,it's a goat,1032,TRUE,baby sheep,goat,Jess,,WU-003
+8293381,but that's not a toys,1566,the pram,1571,TRUE,a toys,the pram,Jess,,WU-003
+8293382,this is not a baby,1087,that looks like a mummie or daddy duck,1089,TRUE,baby,mummie or daddy duck,Jess,,WU-003
+8293394,still the not winner,907,,,TRUE,winner,xxx,Jess,,WU-003
+8293398,what's not a toys,1567,the pram,1571,TRUE,a toys,the pram,Jess,,WU-003
+8293410,you're still the not winner,908,,,TRUE,winner,xxx,Jess,,WU-003
+8293494,they're not toys,1574,and the rocker,1573,TRUE,toys,rocker,Jess,,WU-003
+8293918,it's not a very sturdy one,1012,,,TRUE,very sturdy one,xxx,Jess,,WU-003
+8294859,not Daddy,2193,,,FALSE,,,Jess,,WU-003
+8296619,you're not Anne,1320,you must be Luke,1327,TRUE,Anne,Luke,Jess,,WU-003
+8296702,it's not the station at Grandma's house,132,it's at our house,133,TRUE,station at Grandma's house,at our house,Jess,,WU-003
+8296774,I'm not Daddy,1330,,,TRUE,Daddy,xxx,Jess,,WU-003
+8296883,you're not Anne,1339,you're Luke,1340,TRUE,Anne,Luke,Jess,,WU-003
+8297372,that's not Anne,1374,is Luke there or is Anne coming,1366,TRUE,Anne,Luke,Jess,,WU-003
+8297597,not your kitchen's not locked out,1194,the back+door's locked,1196,TRUE,your kitchen,the back+door,Jess,,WU-003
+8297743,not trousers Mummy,284,dungarees,286,TRUE,trousers,dungarees,Jess,,WU-003
+8297944,there's not room for him now is there,1925,,,FALSE,,,Jess,,WU-003
+8298110,that one not a dress,696,it's a cover,697,TRUE,dress,cover,Jess,,WU-003
+8298259,that's not her hair ribbon is it,1315,that's just her bib,1317,TRUE,her hair ribbon,her bib,Jess,,WU-003
+8298483,not three bears,1439,we're gonna pattern instead of the three bears,1442,TRUE,three bears,pattern,Jess,,WU-003
+8298867,because not room in there any more,756,,,FALSE,,,Jess,,WU-003
+8298911,you've not the little whale,2003,,,FALSE,,,Jess,,WU-003
+8299381,I hope it's not morning time yet,800,put it back on yourself because it's nighttime now,805,TRUE,morning time,nighttime,Jess,,WU-003
+8299690,it's not a hen,371,it's a Zug_the_Pig,372,TRUE,Zug_the_Hen,Zug_the_Pig,Jess,,WU-003
+8300093,no it's not green is it,353,,,TRUE,green,xxx,Jess,,WU-003
+8300458,yeah that's the driver but that's not that's not an engine is it,718,yes we went on a bus,724,TRUE,engine,bus,Jess,,WU-003
+8301117,this is not a pattern,1589,,,TRUE,pattern,xxx,Jess,,WU-003
+8301123,not while I've got my tea anyway,1421,,,FALSE,,,Jess,,WU-003
+8301458,not my hat and Anne's hat,779,wear your hats,778,TRUE,my hat,your hat,Jess,,WU-003
+8301460,no it's not Daddy,844,in the wind,846,TRUE,Daddy,the wind,Jess,,WU-003
+8301615,not boots,856,shoes,857,TRUE,boots,shoes,Jess,,WU-003
+8301952,but you're not a baby little boy,346,,,TRUE,baby little boy,xxx,Jess,,WU-003

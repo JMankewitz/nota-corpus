@@ -1,0 +1,173 @@
+# Not A (Corpus)
+
+In this project, we're looking to quantify the frequency of explicit corrections in the PVD and MAN corpora in CHILDES with the goal of characterizing the type of nouns that are corrected, the incorrect referents produced by the parent/child and the corrected nouns produced by the other speaker. 
+
+We will aim to find phrases in the childes corpora that contain a noun and a negation, (i.e., "thats not a **train** that's a **boat**"). We will then look at the surrounding window around the utterance to determine both the target word of the correction (**train**) and the corrected noun (**boat**). PVD and MAN are ideal corpora for this search because they contain both the gloss for the productions and the grammatical form of the word. We can also use childesr to identify and analyze these utterances. 
+
+```{r}
+library(childesr)
+library(tidyverse)
+library(zoo)
+library(here)
+```
+ 
+Read in the corpora: 
+
+```{r}
+d_utterances <- childesr::get_utterances(corpus = c("Manchester", "Providence"))
+```
+
+# Find Negations
+
+```{r}
+d_utterances_annotated <- d_utterances |> 
+  mutate(contains_correction = grepl('neg n|neg det', part_of_speech))
+```
+
+```{r}
+d_utterances_annotated |> write_csv(here("utterances.csv"))
+```
+
+
+```{r}
+split_into_work_units <- function(input_csv, output_dir = "annotation-units", utterances_per_unit = 50) {
+  
+  # Create output directory if it doesn't exist
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir)
+  }
+  
+  # Read the full unannotated CSV
+  message("Reading input CSV...")
+  data <- read_csv(input_csv)
+  
+  # Calculate how many units we'll need
+  total_utterances <- nrow(data)
+  num_units <- ceiling(total_utterances / utterances_per_unit)
+  
+  message(sprintf("Splitting %d utterances into %d work units with approximately %d utterances each...", 
+                 total_utterances, num_units, utterances_per_unit))
+  
+  # Split data into units
+  for (i in 1:num_units) {
+    # Calculate start and end rows for this unit
+    start_row <- (i - 1) * utterances_per_unit + 1
+    end_row <- min(i * utterances_per_unit, total_utterances)
+    
+    # Create work unit ID with leading zeros for nice sorting
+    work_unit_id <- sprintf("WU-%03d", i)
+    
+    # Extract data for this unit
+    unit_data <- data[start_row:end_row, ]
+    
+    # Add work unit ID column
+    unit_data$work_unit_id <- work_unit_id
+    
+    # Create filename with work unit ID
+    output_file <- file.path(output_dir, paste0("nota-utterances-", work_unit_id, ".csv"))
+    
+    # Write this unit to a CSV
+    write_csv(unit_data, output_file)
+    message(sprintf("Created %s with %d utterances", output_file, nrow(unit_data)))
+  }
+  
+  # Create a summary file
+  summary_data <- tibble(
+    work_unit_id = sprintf("WU-%03d", 1:num_units),
+    start_row = seq(1, total_utterances, utterances_per_unit),
+    end_row = pmin(seq(utterances_per_unit, total_utterances + utterances_per_unit, utterances_per_unit), total_utterances),
+    num_utterances = end_row - start_row + 1
+  )
+  
+  summary_file <- file.path(output_dir, "work_units_summary.csv")
+  write_csv(summary_data, summary_file)
+  message(sprintf("Created summary file: %s", summary_file))
+  
+  message("Done! Work units have been created.")
+  return(summary_data)
+}
+```
+
+```{r}
+d_neg_utterances <- d_utterances_annotated |> 
+  filter(contains_correction) |> 
+  select(id, 
+         transcript_id,
+         negation_utterance = gloss, 
+         negation_utterance_order = utterance_order)
+
+d_neg_utterances |> 
+  write_csv(here("nota-utterances-unannotated.csv"))
+
+# Call the function to split it into work units of 50 utterances each
+work_units <- split_into_work_units(
+  input_csv = "nota-utterances-unannotated.csv",
+  output_dir = "work_units",
+  utterances_per_unit = 50
+)
+
+# View the summary of work units
+print(work_units)
+```
+
+
+```{r}
+
+generate_window <- function(target_transcript, utterance_order, window_size = 10){
+  utterance_min = utterance_order - window_size
+  utterance_max = utterance_order + window_size
+  d_utterances_annotated |> filter(transcript_id == target_transcript, 
+                         utterance_order >= utterance_min, 
+                         utterance_order <= utterance_max)
+}
+
+transcripts <- d_neg_utterances$transcript_id
+neg_utterances <- d_neg_utterances$negation_utterance_order
+
+# Use mapply with SIMPLIFY=FALSE to get a list of dataframes
+window_list <- mapply(generate_window, 
+                     target_transcript = transcripts, 
+                     utterance_order = neg_utterances,
+                     MoreArgs = list(window_size = 10),
+                     SIMPLIFY = FALSE)
+
+# Then bind the rows together
+result <- do.call(rbind, window_list)
+
+result |> 
+  select(id, gloss, type, utterance_order, speaker_role, transcript_id, contains_correction) |> 
+  write_csv(here("nota-utterances.csv"))
+```
+
+
+
+```{r}
+generate_window <- function(target_transcript, utterance_order, window_size = 10){
+  utterance_min = utterance_order - window_size
+  utterance_max = utterance_order + window_size
+  d_utterances_annotated |> filter(transcript_id == target_transcript, 
+                         utterance_order >= utterance_min, 
+                         utterance_order <= utterance_max)
+}
+
+transcripts <- d_neg_utterances$transcript_id
+neg_utterances <- d_neg_utterances$utterance_order
+
+# Use mapply with SIMPLIFY=FALSE to get a list of dataframes
+window_list <- mapply(generate_window, 
+                     target_transcript = transcripts, 
+                     utterance_order = neg_utterances,
+                     MoreArgs = list(window_size = 10),
+                     SIMPLIFY = FALSE)
+
+# Then bind the rows together
+result <- do.call(rbind, window_list)
+```
+
+
+```{r}
+result |> 
+  select(id, gloss, type, utterance_order, speaker_role, transcript_id, contains_correction) |> 
+  write_csv(here("nota-utterances-window.csv"))
+```
+

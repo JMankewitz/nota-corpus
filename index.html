@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHILDES Annotation Tool</title>
+    
+    <!-- React and ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- PapaParse for CSV parsing -->
+    <script src="https://unpkg.com/papaparse@5/papaparse.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    
+    <script type="text/babel">
+    const { useState, useEffect } = React;
+    
+    // Main App Component
+    function AnnotationApp() {
+      // State for loaded data
+      const [windowData, setWindowData] = useState([]);
+      const [unannotatedData, setUnannotatedData] = useState([]);
+      const [annotatedData, setAnnotatedData] = useState([]);
+      const [loading, setLoading] = useState(false);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [contextWindow, setContextWindow] = useState([]);
+      const [selectedUtterance, setSelectedUtterance] = useState(null);
+      const [validContrast, setValidContrast] = useState(false);
+      const [negatedNoun, setNegatedNoun] = useState('');
+      const [contrastNoun, setContrastNoun] = useState('');
+      const [globalAnnotator, setGlobalAnnotator] = useState('');
+      const [annotator, setAnnotator] = useState('');
+      const [notes, setNotes] = useState('');
+      const [progress, setProgress] = useState(0);
+      const [workUnitId, setWorkUnitId] = useState('');
+
+      // Load sample data for demo
+      useEffect(() => {
+        handleSampleData();
+      }, []);
+
+      // Update context window when current index or data changes
+      useEffect(() => {
+        if (unannotatedData.length > 0 && windowData.length > 0) {
+          updateContextWindow();
+        }
+      }, [currentIndex, unannotatedData, windowData]);
+
+      // Update progress percentage
+      useEffect(() => {
+        if (unannotatedData.length > 0) {
+          const annotatedCount = annotatedData.filter(item => 
+            item.contrast_utterance !== '' || item.valid_contrast === false
+          ).length;
+          setProgress((annotatedCount / unannotatedData.length) * 100);
+        }
+      }, [annotatedData, unannotatedData]);
+
+      // Handle file uploads
+      const handleFileUpload = (e, type) => {
+        const file = e.target.files[0];
+        if (file) {
+          setLoading(true);
+          Papa.parse(file, {
+            header: true,
+            complete: (results) => {
+              if (type === 'window') {
+                setWindowData(results.data);
+              } else {
+                // Initialize annotated data with unannotated data
+                setUnannotatedData(results.data);
+                setAnnotatedData(results.data.map(item => ({
+                  ...item,
+                  contrast_utterance: item.contrast_utterance || '',
+                  contrast_utterance_order: item.contrast_utterance_order || '',
+                  valid_contrast: item.valid_contrast === 'TRUE',
+                  negated_noun: item.negated_noun || '',
+                  contrast_noun: item.contrast_noun || '',
+                  annotator: item.annotator || '',
+                  notes: item.notes || ''
+                })));
+              }
+              setLoading(false);
+            }
+          });
+        }
+      };
+
+      // Load sample data for demonstration
+      const handleSampleData = () => {
+        setLoading(true);
+        setWorkUnitId('SAMPLE-001');
+        // Sample window data - with proper transcript_id structure
+        const sampleWindowData = [
+          // Transcript A context
+          { id: '8246287', gloss: 'what are these', type: 'question', utterance_order: '198', speaker_role: 'Child', transcript_id: 'Transcript_A', contains_correction: 'FALSE' },
+          { id: '8246287', gloss: 'looks like papers', type: 'declarative', utterance_order: '199', speaker_role: 'Mother', transcript_id: 'Transcript_A', contains_correction: 'FALSE' },
+          { id: '8246287', gloss: 'they\'re new different', type: 'declarative', utterance_order: '200', speaker_role: 'Mother', transcript_id: 'Transcript_A', contains_correction: 'FALSE' },
+          { id: '8246287', gloss: 'not the same', type: 'declarative', utterance_order: '201', speaker_role: 'Child', transcript_id: 'Transcript_A', contains_correction: 'TRUE' },
+          { id: '8246287', gloss: 'yes that\'s right', type: 'declarative', utterance_order: '202', speaker_role: 'Mother', transcript_id: 'Transcript_A', contains_correction: 'FALSE' },
+          
+          // Transcript A - different utterance
+          { id: '8246644', gloss: 'can we put this here', type: 'question', utterance_order: '263', speaker_role: 'Mother', transcript_id: 'Transcript_A', contains_correction: 'FALSE' },
+          { id: '8246644', gloss: 'look at this', type: 'imperative', utterance_order: '264', speaker_role: 'Child', transcript_id: 'Transcript_A', contains_correction: 'FALSE' },
+          { id: '8246644', gloss: 'there\'s not room for the lorry too is there', type: 'question', utterance_order: '265', speaker_role: 'Mother', transcript_id: 'Transcript_A', contains_correction: 'TRUE' },
+          { id: '8246644', gloss: 'we need more space', type: 'declarative', utterance_order: '266', speaker_role: 'Child', transcript_id: 'Transcript_A', contains_correction: 'FALSE' },
+          
+          // Transcript B context
+          { id: '8248527', gloss: 'what are those', type: 'question', utterance_order: '683', speaker_role: 'Mother', transcript_id: 'Transcript_B', contains_correction: 'FALSE' },
+          { id: '8248527', gloss: 'got things inside', type: 'declarative', utterance_order: '684', speaker_role: 'Child', transcript_id: 'Transcript_B', contains_correction: 'FALSE' },
+          { id: '8248527', gloss: 'they\'re not bags', type: 'declarative', utterance_order: '685', speaker_role: 'Child', transcript_id: 'Transcript_B', contains_correction: 'TRUE' },
+          { id: '8248527', gloss: 'they\'re boxes', type: 'declarative', utterance_order: '686', speaker_role: 'Mother', transcript_id: 'Transcript_B', contains_correction: 'FALSE' },
+          { id: '8248527', gloss: 'oh boxes yes', type: 'declarative', utterance_order: '687', speaker_role: 'Child', transcript_id: 'Transcript_B', contains_correction: 'FALSE' },
+          
+          // Transcript B - different utterance
+          { id: '8249806', gloss: 'let\'s play a game', type: 'declarative', utterance_order: '745', speaker_role: 'Mother', transcript_id: 'Transcript_B', contains_correction: 'FALSE' },
+          { id: '8249806', gloss: 'where\'s your nose', type: 'question', utterance_order: '746', speaker_role: 'Mother', transcript_id: 'Transcript_B', contains_correction: 'FALSE' },
+          { id: '8249806', gloss: 'touch nose', type: 'imperative', utterance_order: '747', speaker_role: 'Mother', transcript_id: 'Transcript_B', contains_correction: 'FALSE' },
+          { id: '8249806', gloss: 'not my nose', type: 'declarative', utterance_order: '748', speaker_role: 'Child', transcript_id: 'Transcript_B', contains_correction: 'TRUE' },
+          { id: '8249806', gloss: 'whose nose then', type: 'question', utterance_order: '749', speaker_role: 'Mother', transcript_id: 'Transcript_B', contains_correction: 'FALSE' },
+          
+          // Transcript C context
+          { id: '8252313', gloss: 'what animal is that', type: 'question', utterance_order: '1060', speaker_role: 'Mother', transcript_id: 'Transcript_C', contains_correction: 'FALSE' },
+          { id: '8252313', gloss: 'rawr', type: 'other', utterance_order: '1061', speaker_role: 'Child', transcript_id: 'Transcript_C', contains_correction: 'FALSE' },
+          { id: '8252313', gloss: 'actually it\'s a tiger isn\'t it', type: 'question', utterance_order: '1062', speaker_role: 'Mother', transcript_id: 'Transcript_C', contains_correction: 'FALSE' },
+          { id: '8252313', gloss: 'not a lion', type: 'declarative', utterance_order: '1063', speaker_role: 'Child', transcript_id: 'Transcript_C', contains_correction: 'TRUE' },
+          { id: '8252313', gloss: 'that\'s right it\'s a tiger', type: 'declarative', utterance_order: '1064', speaker_role: 'Mother', transcript_id: 'Transcript_C', contains_correction: 'FALSE' }
+        ];
+        
+        // Sample unannotated data
+        const sampleUnannotatedData = [
+          { id: '8246287', negation_utterance: 'not the same', negation_utterance_order: '201', contrast_utterance: 'they\'re new different', contrast_utterance_order: '200', valid_contrast: 'TRUE', negated_noun: 'same', contrast_noun: 'different', annotator: 'together', notes: '' },
+          { id: '8246644', negation_utterance: 'there\'s not room for the lorry too is there', negation_utterance_order: '265', contrast_utterance: '', contrast_utterance_order: '', valid_contrast: 'FALSE', negated_noun: '', contrast_noun: '', annotator: '', notes: '' },
+          { id: '8248527', negation_utterance: 'they\'re not bags', negation_utterance_order: '685', contrast_utterance: 'they\'re boxes', contrast_utterance_order: '686', valid_contrast: 'TRUE', negated_noun: 'bags', contrast_noun: 'boxes', annotator: 'together', notes: '' },
+          { id: '8249806', negation_utterance: 'not my nose', negation_utterance_order: '748', contrast_utterance: '', contrast_utterance_order: '', valid_contrast: 'FALSE', negated_noun: '', contrast_noun: '', annotator: '', notes: '' },
+          { id: '8252313', negation_utterance: 'not a lion', negation_utterance_order: '1063', contrast_utterance: 'actually it\'s a tiger isn\'t it', contrast_utterance_order: '1062', valid_contrast: 'TRUE', negated_noun: 'lion', contrast_noun: 'tiger', annotator: '', notes: '' }
+        ];
+        
+        setWindowData(sampleWindowData);
+        setUnannotatedData(sampleUnannotatedData);
+        setAnnotatedData(sampleUnannotatedData.map(item => ({
+          ...item,
+          contrast_utterance: item.contrast_utterance || '',
+          contrast_utterance_order: item.contrast_utterance_order || '',
+          valid_contrast: item.valid_contrast === 'TRUE',
+          negated_noun: item.negated_noun || '',
+          contrast_noun: item.contrast_noun || '',
+          annotator: item.annotator || '',
+          notes: item.notes || ''
+        })));
+        
+        setLoading(false);
+      };
+
+      // Update context window for current item
+      const updateContextWindow = () => {
+        const currentItem = unannotatedData[currentIndex];
+        if (!currentItem) return;
+        
+        const currentId = currentItem.id;
+        const currentOrder = parseInt(currentItem.negation_utterance_order);
+        
+        // Find the target utterance first to get its transcript ID
+        const targetUtterance = windowData.find(item => 
+          item.id === currentId && 
+          item.utterance_order === currentItem.negation_utterance_order
+        );
+        
+        if (!targetUtterance) {
+          console.error("Target utterance not found in window data");
+          setContextWindow([]);
+          return;
+        }
+        
+        const currentTranscriptId = targetUtterance.transcript_id;
+        
+        // Find all utterances in the same transcript within the 10-utterance window
+        const window = windowData
+          .filter(item => 
+            // First ensure we're in the same transcript
+            item.transcript_id === currentTranscriptId && 
+            // Then ensure we're within the 10-utterance window
+            parseInt(item.utterance_order) >= currentOrder - 10 && 
+            parseInt(item.utterance_order) <= currentOrder + 10
+          )
+          .sort((a, b) => parseInt(a.utterance_order) - parseInt(b.utterance_order));
+        
+        setContextWindow(window);
+        
+        // Reset selection and form
+        setSelectedUtterance(null);
+        loadCurrentAnnotation();
+      };
+
+      // Load current annotation
+      const loadCurrentAnnotation = () => {
+        const currentAnnotation = annotatedData[currentIndex];
+        if (currentAnnotation) {
+          setValidContrast(currentAnnotation.valid_contrast);
+          setNegatedNoun(currentAnnotation.negated_noun || '');
+          setContrastNoun(currentAnnotation.contrast_noun || '');
+          setAnnotator(currentAnnotation.annotator || globalAnnotator);
+          setNotes(currentAnnotation.notes || '');
+          
+          // If there's a contrast utterance already selected
+          if (currentAnnotation.contrast_utterance_order) {
+            const matchingUtterance = contextWindow.find(
+              item => item.utterance_order === currentAnnotation.contrast_utterance_order
+            );
+            setSelectedUtterance(matchingUtterance);
+          }
+        }
+      };
+
+      // Save current annotation
+      const saveAnnotation = () => {
+        const newAnnotatedData = [...annotatedData];
+        newAnnotatedData[currentIndex] = {
+          ...newAnnotatedData[currentIndex],
+          contrast_utterance: selectedUtterance ? selectedUtterance.gloss : '',
+          contrast_utterance_order: selectedUtterance ? selectedUtterance.utterance_order : '',
+          valid_contrast: validContrast,
+          negated_noun: negatedNoun,
+          contrast_noun: contrastNoun,
+          annotator: annotator,
+          notes: notes
+        };
+        
+        setAnnotatedData(newAnnotatedData);
+      };
+
+      // Navigate to previous item
+      const handlePrevious = () => {
+        if (currentIndex > 0) {
+          saveAnnotation();
+          setCurrentIndex(currentIndex - 1);
+        }
+      };
+
+      // Navigate to next item
+      const handleNext = () => {
+        if (currentIndex < unannotatedData.length - 1) {
+          saveAnnotation();
+          setCurrentIndex(currentIndex + 1);
+        }
+      };
+
+      // Select an utterance as the contrast
+      const handleSelectUtterance = (utterance) => {
+        setSelectedUtterance(utterance);
+      };
+
+      // Export annotations as CSV
+      // Export annotations as CSV
+        const handleExport = () => {
+        // Save current annotation before export
+        saveAnnotation();
+        
+        // Add work unit ID to the annotated data if it's not already there
+        const formattedData = annotatedData.map(item => ({
+            ...item,
+            valid_contrast: item.valid_contrast ? 'TRUE' : 'FALSE',
+            work_unit_id: workUnitId // Add work unit ID to each row
+        }));
+        
+        const csv = Papa.unparse(formattedData);
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create filename with work unit ID
+        const filename = workUnitId 
+            ? `annotated_utterances_unit_${workUnitId}.csv` 
+            : 'annotated_utterances.csv';
+        
+        // Create temporary link and click it to download
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        };
+
+      // Render negation utterance details
+      const renderNegationUtterance = () => {
+        if (unannotatedData.length === 0 || currentIndex >= unannotatedData.length) return null;
+        
+        const current = unannotatedData[currentIndex];
+        return (
+          <div className="bg-blue-50 p-4 rounded-lg shadow mb-4">
+            <h3 className="text-lg font-semibold">Target Negation Utterance:</h3>
+            <p className="text-xl font-bold my-2">{current.negation_utterance}</p>
+            <p className="text-sm text-gray-600">Order: {current.negation_utterance_order} | ID: {current.id}</p>
+          </div>
+        );
+      };
+
+      // Render context window
+      const renderContextWindow = () => {
+        if (contextWindow.length === 0) return null;
+        
+        const currentOrder = unannotatedData[currentIndex]?.negation_utterance_order;
+        
+        return (
+          <div className="bg-white rounded-lg shadow p-2 mb-4 overflow-auto" style={{ maxHeight: 'calc(100vh - 350px)' }}>
+            <h3 className="text-lg font-semibold mb-2">Context Window:</h3>
+            <table className="w-full">
+              <thead className="sticky top-0 bg-white">
+                <tr className="bg-gray-100">
+                  <th className="px-2 py-1 text-left">Order</th>
+                  <th className="px-2 py-1 text-left">Speaker</th>
+                  <th className="px-2 py-1 text-left">Transcript</th>
+                  <th className="px-2 py-1 text-left">Utterance</th>
+                  <th className="px-2 py-1 text-left">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {contextWindow.map((utterance, idx) => (
+                  <tr 
+                    key={idx} 
+                    className={`
+                      ${utterance.utterance_order === currentOrder ? 'bg-blue-100' : ''}
+                      ${utterance === selectedUtterance ? 'bg-green-100' : ''}
+                      hover:bg-gray-50
+                    `}
+                  >
+                    <td className="px-2 py-1 text-sm">{utterance.utterance_order}</td>
+                    <td className="px-2 py-1 text-sm">{utterance.speaker_role}</td>
+                    <td className="px-2 py-1 text-sm">{utterance.transcript_id}</td>
+                    <td className="px-2 py-1">{utterance.gloss}</td>
+                    <td className="px-2 py-1">
+                      {utterance.utterance_order !== currentOrder && (
+                        <button 
+                          onClick={() => handleSelectUtterance(utterance)}
+                          className="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded-md text-sm"
+                        >
+                          Select
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      };
+
+      // Render annotation form
+      const renderAnnotationForm = () => {
+        return (
+          <div className="bg-white rounded-lg shadow p-4 mb-4" style={{ height: 'calc(100vh - 350px)', overflow: 'auto' }}>
+            <h3 className="text-lg font-semibold mb-4">Annotation:</h3>
+            
+            <div className="mb-6">
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Valid Contrast:</label>
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center">
+                    <input 
+                      type="radio" 
+                      checked={validContrast === true} 
+                      onChange={() => setValidContrast(true)}
+                      className="mr-2"
+                    />
+                    <span>TRUE</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input 
+                      type="radio" 
+                      checked={validContrast === false} 
+                      onChange={() => setValidContrast(false)}
+                      className="mr-2"
+                    />
+                    <span>FALSE</span>
+                  </label>
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Selected Contrast Utterance:</label>
+                <div className="p-2 bg-gray-100 rounded min-h-12">
+                  {selectedUtterance ? (
+                    <>
+                      <p>{selectedUtterance.gloss}</p>
+                      <p className="text-sm text-gray-600">Order: {selectedUtterance.utterance_order}</p>
+                    </>
+                  ) : (
+                    <p className="text-gray-500">No utterance selected</p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Negated Noun:</label>
+                <input 
+                  type="text" 
+                  value={negatedNoun} 
+                  onChange={(e) => setNegatedNoun(e.target.value)}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Contrast Noun:</label>
+                <input 
+                  type="text" 
+                  value={contrastNoun} 
+                  onChange={(e) => setContrastNoun(e.target.value)}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Annotator:</label>
+                <div className="flex items-center">
+                  <input 
+                    type="text" 
+                    value={annotator} 
+                    onChange={(e) => setAnnotator(e.target.value)}
+                    className="w-full p-2 border rounded"
+                    placeholder={globalAnnotator ? `Using: ${globalAnnotator}` : "Enter annotator name"}
+                  />
+                  {globalAnnotator && annotator !== globalAnnotator && (
+                    <button 
+                      onClick={() => setAnnotator(globalAnnotator)}
+                      className="ml-2 bg-blue-500 hover:bg-blue-600 text-white px-2 py-2 rounded-md text-sm"
+                    >
+                      Use Global
+                    </button>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Notes:</label>
+                <textarea 
+                  value={notes} 
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows="3"
+                  className="w-full p-2 border rounded"
+                ></textarea>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button 
+                onClick={() => saveAnnotation()}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md mr-2"
+              >
+                Save Annotation
+              </button>
+            </div>
+          </div>
+        );
+      };
+
+      // Render navigation controls
+      const renderNavigation = () => {
+        return (
+          <div className="flex justify-between items-center">
+            <div>
+              <button 
+                onClick={handlePrevious}
+                disabled={currentIndex === 0}
+                className={`px-4 py-2 rounded-md mr-2 ${currentIndex === 0 ? 'bg-gray-300' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+              >
+                Previous
+              </button>
+              <button 
+                onClick={handleNext}
+                disabled={currentIndex === unannotatedData.length - 1}
+                className={`px-4 py-2 rounded-md ${currentIndex === unannotatedData.length - 1 ? 'bg-gray-300' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+              >
+                Next
+              </button>
+            </div>
+            
+            <div className="text-gray-600">
+              {currentIndex + 1} of {unannotatedData.length}
+            </div>
+          </div>
+        );
+      };
+
+      // Main render
+      return (
+        <div className="p-4 max-w-7xl mx-auto">
+          <h1 className="text-2xl font-bold mb-4">CHILDES Utterance Annotation Tool</h1>
+          
+          {/* File inputs and progress */}
+<div className="mb-6 bg-white rounded-lg shadow p-4">
+  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+    {/* First three columns (file inputs and annotator) remain the same */}
+    <div>
+      <label className="block text-gray-700 mb-2">Upload Window Data CSV:</label>
+      <input 
+        type="file" 
+        accept=".csv" 
+        onChange={(e) => handleFileUpload(e, 'window')}
+        className="w-full p-2 border rounded"
+      />
+    </div>
+    
+    <div>
+      <label className="block text-gray-700 mb-2">Upload Unannotated Data CSV:</label>
+      <input 
+        type="file" 
+        accept=".csv" 
+        onChange={(e) => handleFileUpload(e, 'unannotated')}
+        className="w-full p-2 border rounded"
+      />
+    </div>
+
+    <div>
+      <label className="block text-gray-700 mb-2">Annotator Name:</label>
+      <input 
+        type="text" 
+        value={globalAnnotator} 
+        onChange={(e) => setGlobalAnnotator(e.target.value)}
+        placeholder="Enter your name"
+        className="w-full p-2 border rounded"
+      />
+    </div>
+
+    {/* Add new Work Unit ID field */}
+    <div>
+      <label className="block text-gray-700 mb-2">Work Unit ID:</label>
+      <input 
+        type="text" 
+        value={workUnitId} 
+        onChange={(e) => setWorkUnitId(e.target.value)}
+        placeholder="Enter work unit ID"
+        className="w-full p-2 border rounded"
+      />
+    </div>
+
+    <div className="flex items-end">
+      <button 
+        onClick={handleSampleData}
+        className="bg-gray-500 hover:bg-gray-600 text-white px-3 py-2 rounded-md mr-2"
+      >
+        Load Sample
+      </button>
+      
+      <button 
+        onClick={handleExport}
+        disabled={annotatedData.length === 0}
+        className={`px-3 py-2 rounded-md ${annotatedData.length === 0 ? 'bg-gray-300' : 'bg-green-500 hover:bg-green-600 text-white'}`}
+      >
+        Export CSV
+      </button>
+    </div>
+  </div>
+  
+  {/* Progress bar remains the same */}
+  <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
+    <div 
+      className="bg-blue-600 rounded-full h-4" 
+      style={{ width: `${progress}%` }}
+    ></div>
+  </div>
+  <div className="text-sm text-gray-600 text-right">
+    {Math.round(progress)}% complete
+  </div>
+</div>
+
+          {loading ? (
+            <div className="text-center py-8">
+              <p className="text-lg">Loading data...</p>
+            </div>
+          ) : (
+            <>
+              {unannotatedData.length > 0 ? (
+                <>
+                  {renderNegationUtterance()}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      {renderContextWindow()}
+                    </div>
+                    <div>
+                      {renderAnnotationForm()}
+                    </div>
+                  </div>
+                  {renderNavigation()}
+                </>
+              ) : (
+                <div className="text-center py-8 bg-white rounded-lg shadow">
+                  <p className="text-lg">Please upload your CSV files or load the sample data to start annotating.</p>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      );
+    }
+
+    // Render the app
+    const rootElement = document.getElementById('root');
+    ReactDOM.render(<AnnotationApp />, rootElement);
+    </script>
+</body>
+</html>
