@@ -38,6 +38,9 @@
       const [annotatorName, setAnnotatorName] = useState('');
       const [workUnit, setWorkUnit] = useState('');
       
+      // State for reference guide
+      const [showGuide, setShowGuide] = useState(false);
+      
       // Updated annotation state
       const [validContrast, setValidContrast] = useState(false);
       const [contrastedUtterance, setContrastedUtterance] = useState(null);
@@ -56,6 +59,13 @@
           updateContextWindow();
         }
       }, [currentIndex, unannotatedData, windowData]);
+
+      // Add this new useEffect to load annotations after context window is set
+      useEffect(() => {
+        if (contextWindow.length > 0) {
+          loadCurrentAnnotation();
+        }
+      }, [contextWindow, currentIndex]);
 
       // Handle file uploads
       const handleFileUpload = (e, type) => {
@@ -77,7 +87,7 @@
                   contrasted_utterance_order: item.contrasted_utterance_order || '',
                   negated_utterance: item.negated_utterance || '',
                   negated_utterance_order: item.negated_utterance_order || '',
-                  valid_contrast: item.valid_contrast === 'TRUE',
+                  valid_contrast: item.valid_contrast === 'TRUE' || item.valid_contrast === true,
                   negated_noun: item.negated_noun || '',
                   contrasted_noun: item.contrasted_noun || '',
                   contrast_source: item.contrast_source || '',
@@ -128,11 +138,6 @@
           .sort((a, b) => parseInt(a.utterance_order) - parseInt(b.utterance_order));
         
         setContextWindow(window);
-        
-        // Reset selections and load current annotation
-        setContrastedUtterance(null);
-        setNegatedUtterance(null);
-        loadCurrentAnnotation();
       };
 
       // Load current annotation
@@ -153,14 +158,18 @@
             const matchingUtterance = contextWindow.find(
               item => item.utterance_order === currentAnnotation.contrasted_utterance_order
             );
-            setContrastedUtterance(matchingUtterance);
+            setContrastedUtterance(matchingUtterance || null);
+          } else {
+            setContrastedUtterance(null);
           }
           
           if (currentAnnotation.negated_utterance_order) {
             const matchingUtterance = contextWindow.find(
               item => item.utterance_order === currentAnnotation.negated_utterance_order
             );
-            setNegatedUtterance(matchingUtterance);
+            setNegatedUtterance(matchingUtterance || null);
+          } else {
+            setNegatedUtterance(null);
           }
         }
       };
@@ -187,6 +196,20 @@
         };
         
         setAnnotatedData(newAnnotatedData);
+      };
+
+      // Clear all selections
+      const handleClearAll = () => {
+        setValidContrast(false);
+        setContrastedUtterance(null);
+        setNegatedUtterance(null);
+        setNegatedNoun('');
+        setContrastedNoun('');
+        setContrastSource('');
+        setContrastStructure('');
+        setContrastDomain('');
+        setContrastFunction('');
+        setNotes('');
       };
 
       // Navigate to previous item
@@ -475,7 +498,7 @@
             <div className="mb-4">
               <label className="block text-gray-700 mb-2 font-medium">Contrast Function:</label>
               <div className="flex flex-wrap gap-2">
-                {['Referential Disagreement', 'Conceptual Correction', 'Pedagogical', 'Other/Unclear/IDK'].map(option => (
+                {['Conceptual Correction', 'Referential Disagreement', 'Pedagogical', 'Dubbing','Other/Unclear/IDK'].map(option => (
                   <button
                     key={option}
                     onClick={() => setContrastFunction(option)}
@@ -503,7 +526,13 @@
               />
             </div>
 
-            <div className="flex justify-end">
+            <div className="flex justify-end space-x-2">
+              <button 
+                onClick={handleClearAll}
+                className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md"
+              >
+                Clear All
+              </button>
               <button 
                 onClick={() => saveAnnotation()}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md"
@@ -540,6 +569,116 @@
               {currentIndex + 1} of {unannotatedData.length}
             </div>
           </div>
+        );
+      };
+
+      // Render quick reference guide
+      const renderQuickGuide = () => {
+        return (
+          <>
+            {/* Floating button */}
+            <button
+              onClick={() => setShowGuide(true)}
+              className="fixed bottom-4 right-4 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-lg z-40"
+              title="Quick Reference Guide"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+
+            {/* Modal */}
+            {showGuide && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg shadow-xl max-w-4xl max-h-[90vh] overflow-auto m-4">
+                  <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                    <h2 className="text-2xl font-bold">Quick Reference Guide</h2>
+                    <button
+                      onClick={() => setShowGuide(false)}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <div className="p-6 space-y-6">
+                    {/* Valid Contrast */}
+                    <div>
+                      <h3 className="text-lg font-bold mb-2 text-purple-700">Valid Contrast</h3>
+                      <ul className="ml-4 space-y-1">
+                        <li><strong>TRUE:</strong> Discourse contains contrast (explicit or implicit)</li>
+                        <li><strong>FALSE:</strong> Has negation but not contrastive (e.g., "There's not room", "No book")</li>
+                      </ul>
+                    </div>
+
+                    {/* Utterance Information */}
+                    <div>
+                      <h3 className="text-lg font-bold mb-2 text-purple-700">Utterance Information</h3>
+                      <ul className="ml-4 space-y-1">
+                        <li><strong>Negated:</strong> The utterance being negated (e.g., "the sheep" → "no not that one")</li>
+                        <li><strong>Contrasted:</strong> The alternative utterance (e.g., "I think it's a dog")</li>
+                      </ul>
+                    </div>
+
+                    {/* Contrast Source */}
+                    <div>
+                      <h3 className="text-lg font-bold mb-2 text-purple-700">Contrast Source</h3>
+                      <ul className="ml-4 space-y-1">
+                        <li><strong>Adult-to-child:</strong> Adult contrasting child's utterance/action</li>
+                        <li><strong>Child-to-adult:</strong> Child contrasting adult's utterance/action</li>
+                        <li><strong>Self (Adult):</strong> Adult self-correcting</li>
+                        <li><strong>Self (Child):</strong> Child self-correcting</li>
+                      </ul>
+                    </div>
+
+                    {/* Contrast Structure */}
+                    <div>
+                      <h3 className="text-lg font-bold mb-2 text-purple-700">Contrast Structure</h3>
+                      <ul className="ml-4 space-y-1">
+                        <li><strong>Direct:</strong> Clear negation with alternative ("Not X, Y")</li>
+                        <li><strong>Speaker Uncertain:</strong> Uncertainty signals ("maybe that's not a piggy")</li>
+                      </ul>
+                    </div>
+
+                    {/* Contrast Domain */}
+                    <div>
+                      <h3 className="text-lg font-bold mb-2 text-purple-700">Contrast Domain</h3>
+                      <ul className="ml-4 space-y-1">
+                        <li><strong>Identity/Social:</strong> Basic identification, roles ("Not a dog, a sheep")</li>
+                        <li><strong>Property:</strong> Attributes ("Not the red truck, the blue truck")</li>
+                        <li><strong>Possession:</strong> Ownership clarifications ("your dress, not my dress")</li>
+                        <li><strong>Function:</strong> How things work/are used ("That's not for eating")</li>
+                      </ul>
+                    </div>
+
+                    {/* Contrast Function */}
+                    <div>
+                      <h3 className="text-lg font-bold mb-2 text-purple-700">Contrast Function</h3>
+                      <ul className="ml-4 space-y-1">
+                        <li><strong>Conceptual Correction:</strong> Same referent, different label ("Where's the dog?" → "No, that's a sheep")</li>
+                        <li><strong>Referential Disagreement:</strong> Different referent ("Hand me the pencil" → "No not the red one")</li>
+                        <li><strong>Dubbing:</strong> Deciding what to call something ("Should we call this Mary?" → "No, Rebecca")</li>
+                        <li><strong>Pedagogical:</strong> Teaching without error correction</li>
+                      </ul>
+                    </div>
+
+                    {/* Examples */}
+                    <div className="border-t pt-4">
+                      <h3 className="text-lg font-bold mb-2 text-purple-700">Quick Examples</h3>
+                      <div className="bg-gray-50 p-3 rounded space-y-2 text-sm">
+                        <p><strong>Valid Contrast:</strong> "That's not a dog, it's a sheep" ✓</p>
+                        <p><strong>Invalid Contrast:</strong> "There's not enough time" ✗</p>
+                        <p><strong>Conceptual:</strong> Same object, different label</p>
+                        <p><strong>Referential:</strong> Different objects being discussed</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         );
       };
 
@@ -642,6 +781,9 @@
               )}
             </>
           )}
+          
+          {/* Quick Reference Guide */}
+          {renderQuickGuide()}
         </div>
       );
     }
